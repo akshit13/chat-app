@@ -1,15 +1,29 @@
-let usersRef = firebase.database().ref('users');
+let usersReference = firebase.database().ref('users');
+
+// ON LOGIN BUTTON CLICK
+$('#btn-login').click(
+  function() {
+    let email = $('#text-email').val();
+    let password = $('#text-password').val();
+
+    if (email != "" && password != "") {
+      firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
+        $('#login-error').show().text(error.message);
+      });
+    }
+  }
+)
 
 // ON SIGNUP BUTTON CLICK
-$("#btn-signup-two").click(
+$('#btn-signup-two').click(
   function() {
-    let username = $("#text-name").val();
-    let email = $("#text-email").val();
-    let password = $("#text-password").val();
+    let username = $('#text-name').val();
+    let email = $('#text-email').val();
+    let password = $('#text-password').val();
 
     if (email != "" && password != "" && username != "") {
       firebase.auth().createUserWithEmailAndPassword(email, password).catch(function(error) {
-        $("#login-error").show().text(error.message);
+        $('#login-error').show().text(error.message);
       });
       let user = firebase.auth().currentUser;
       if (user) {
@@ -17,71 +31,83 @@ $("#btn-signup-two").click(
           displayName: username
         })
       }
-      updateNewUserInFirebaseDB(username, email);
+      addNewUserInFirebaseDB(username, email);
       updateUIAfterLogin(email);
     }
   }
-);
+)
 
-// UPDATE NEW USERS IN 'users' COLLECTION
-function updateNewUserInFirebaseDB(username, email) {
+// ON LOGOUT BUTTON CLICK
+$('#btn-logout').click(
+  function() {
+    firebase.auth().signOut().catch(function(error) {
+      alert(error.message);
+    });
+    clearSession();
+    location.reload();
+  }
+)
+
+//SECONDARY BUTTONS ACTION
+$('#btn-signup-one').click(
+  function() {
+    $('#name-space').show();
+    $('#signup-btn-two').show();
+    $('#login-btn-two').show();
+    $('#login-btn-one').hide();
+    $('#signup-btn-one').hide();
+  }
+)
+
+$('#btn-login-two').click(
+  function() {
+    $('#name-space').hide();
+    $('#signup-btn-two').hide();
+    $('#login-btn-two').hide();
+    $('#login-btn-one').show();
+    $('#signup-btn-one').show();
+  }
+)
+
+// ADD NEW USERS IN 'users' COLLECTION
+function addNewUserInFirebaseDB(username, email) {
   let newUser = {
     username: username,
     email: email
   };
-  usersRef.push().set(newUser);
-  sessionStorage.setItem('USERNAME', username);
+  usersReference.push().set(newUser);
+  sessionStorage.setItem('SENDER', username);
   sessionStorage.setItem('USEREMAIL', email);
 }
 
-// UPDATE UI(DIALOG) AFTER USER LOGIN/SIGNUP
+// SHOW/HIDE DIALOG
 firebase.auth().onAuthStateChanged(function(user) {
+  let loginDialog = document.querySelector('#login-dialog');
+  if (!loginDialog.showModal) {
+    dialogPolyfill.registerDialog(loginDialog);
+  }
   if (user) {
-    // USER IS SIGNED IN
-    $(".login-cover").hide();
-    let loginDialog = document.querySelector('#login-dialog');
-    if (!loginDialog.showModal) {
-      dialogPolyfill.registerDialog(loginDialog);
-    }
+    $('.login-cover').hide();
     loginDialog.close();
     updateUIAfterLogin(user.email);
   } else {
-    // NO USER IS SIGNED IN
-    $(".login-cover").show();
-    let loginDialog = document.querySelector('#login-dialog');
-    if (!loginDialog.showModal) {
-      dialogPolyfill.registerDialog(loginDialog);
-    }
+    $('.login-cover').show();
     loginDialog.showModal();
   }
-});
-
-// ON LOGIN BUTTON CLICK
-$("#btn-login").click(
-  function() {
-    let email = $("#text-email").val();
-    let password = $("#text-password").val();
-
-    if (email != "" && password != "") {
-      firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
-        $("#login-error").show().text(error.message);
-      });
-    }
-  }
-);
+})
 
 // UPDATE UI AFTER USER SIGNIN
 function updateUIAfterLogin(email) {
   sessionStorage.setItem('USEREMAIL', email);
   getAndUpdateUsernameFromFirebaseDB(email);
-  $("#email-area").text(sessionStorage.getItem('USEREMAIL'));
+  $('#email-area').text(email);
   getAndUpdateUsersFromFirebaseDB(email);
 }
 
 // GET AND UPDATE USERLIST FROM FIREBASE DB 'users'
 function getAndUpdateUsersFromFirebaseDB(email) {
   let output = user = '';
-  usersRef.on('child_added', function(snapshot) {
+  usersReference.on('child_added', function(snapshot) {
     user = snapshot.val();
     if (user.email != email)
       output += '<button onclick="chatWindow(this)" id="' + user.username + '" class="mdl-navigation__link"><i class="material-icons">account_circle</i> &nbsp;' + user.username + '</button>';
@@ -91,99 +117,65 @@ function getAndUpdateUsersFromFirebaseDB(email) {
 
 // GET AND UPDATE USERNAME FROM FIREBASE DB 'users'
 function getAndUpdateUsernameFromFirebaseDB(email) {
-  usersRef.on('child_added', function(snapshot) {
+  usersReference.on('child_added', function(snapshot) {
     user = snapshot.val();
     if (user.email == email) {
-      sessionStorage.setItem('USERNAME', user.username);
-      $("#username-area").text(sessionStorage.getItem('USERNAME'));
+      sessionStorage.setItem('SENDER', user.username);
+      $('#username-area').text(sessionStorage.getItem('SENDER'));
     }
   });
 }
 
-// ON LOGOUT BUTTON CLICK
-$("#btn-logout").click(
-  function() {
-    firebase.auth().signOut().catch(function(error) {
-      alert(error.message);
-    });
-    $("#text-name").val('');
-    $("#text-email").val('');
-    $("#text-password").val('');
-    clearSession();
-    location.reload();
-  }
-);
 
 // POPULATE CHAT WINDOW
 function chatWindow(username) {
-  $("#chat-window").show();
-  $("#chat-uname").text(username.id);
+  $('#chat-window').show();
+  $('#chat-uname').text(username.id);
 
-  sessionStorage.removeItem('USER2');
+  sessionStorage.removeItem('RECEIVER');
   sessionStorage.removeItem('TABLENAME');
-  sessionStorage.setItem('USER2', username.id);
+  sessionStorage.setItem('RECEIVER', username.id);
   updateTableName(username.id);
   document.getElementById('chat-frame').contentWindow.location.reload();
 }
 
 // HELPER FUNCTION TO UPDATE TABLE NAME FOR CHAT
-let gChatRef, gUser1;
+let globalChatReference;
 
 function updateTableName(receiver) {
-  let sender = sessionStorage.getItem('USERNAME');
-  let tableName = 'TAB_';
+  let sender = sessionStorage.getItem('SENDER');
+  let tableName = 'CHAT_';
   if (sender < receiver) {
     tableName += sender + receiver;
   } else {
     tableName += receiver + sender;
   }
   let chatRef = firebase.database().ref(tableName);
-  gChatRef = chatRef;
-  gUser1 = sender;
+  globalChatReference = chatRef;
   sessionStorage.setItem('TABLENAME', tableName);
 }
 
 // SEND NEW MESSAGE
 $('#msg-form').submit(function(e) {
   e.preventDefault();
-  let msg = $('#chat-input').val();
-  let newMsg = {
-    username: gUser1,
-    msg: msg
+  let sender = sessionStorage.getItem('SENDER');
+  let message = $('#chat-input').val();
+  let newMessage = {
+    username: sender,
+    message: message
   };
-  if (msg)
-    gChatRef.push().set(newMsg);
+  globalChatReference.push().set(newMessage);
   $('#chat-input').val('');
-});
+})
 
 // CLOSE CHAT WINDOW
-$("#btn-close").click(
+$('#btn-close').click(
   function() {
-    $("#chat-window").hide();
+    $('#chat-window').hide();
   }
-);
+)
 
-// CLEAR/DELETE SESSION
+// CLEAR/DELETE SESSION STORAGE
 function clearSession() {
   sessionStorage.clear();
 }
-
-$("#btn-signup-one").click(
-  function() {
-    $("#name-space").show();
-    $("#signup-btn-two").show();
-    $("#login-btn-two").show();
-    $("#login-btn-one").hide();
-    $("#signup-btn-one").hide();
-  }
-)
-
-$("#btn-login-two").click(
-  function() {
-    $("#name-space").hide();
-    $("#signup-btn-two").hide();
-    $("#login-btn-two").hide();
-    $("#login-btn-one").show();
-    $("#signup-btn-one").show();
-  }
-)

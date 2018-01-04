@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -10,21 +11,22 @@
   <link rel="stylesheet" href="public/css/dialog-polyfill.css">
   <link rel="stylesheet" href="public/css/index.css">
 </head>
+
 <body>
   <!-- LOGIN DIALOG -->
   <dialog id="login-dialog" class="mdl-dialog">
     <h4 class="mdl-dialog__title">Chat-app</h4>
     <div class="mdl-dialog__content">
       <p id="login-error"></p>
-      <div id="name-space" class="mdl-textfield mdl-js-textfield">
+      <div id="name-space" class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input class="mdl-textfield__input" type="text" id="text-name">
         <label class="mdl-textfield__label">Username</label>
       </div>
-      <div class="mdl-textfield mdl-js-textfield">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input class="mdl-textfield__input" type="email" id="text-email">
         <label class="mdl-textfield__label">E-mail</label>
       </div>
-      <div class="mdl-textfield mdl-js-textfield">
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
         <input class="mdl-textfield__input" type="password" id="text-password">
         <label class="mdl-textfield__label">Password</label>
       </div>
@@ -33,7 +35,7 @@
       <button id="btn-login" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect">Log In</button>
     </span>
     <span id="signup-btn-one" class="mdl-dialog__actions">
-      <button id="btn-signup-one"> Signup</button>
+      <button id="btn-signup-one">Signup</button>
     </span>
     <span id="signup-btn-two" class="mdl-dialog__actions">
       <button id="btn-signup-two" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect">Sign Up</button>
@@ -98,4 +100,5 @@
   <script src="public/js/firebase-init.js"></script>
   <script src="public/js/index.js"></script>
 </body>
+
 </html>

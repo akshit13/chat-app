@@ -1,7 +1,8 @@
-let sender = sessionStorage.getItem('USERNAME');
-let receiver = sessionStorage.getItem('USER2');
-let tableName = 'TAB_';
+let sender = sessionStorage.getItem('SENDER');
+let receiver = sessionStorage.getItem('RECEIVER');
+let tableName = 'CHAT_';
 
+//SET TABLE NAME
 if (sender < receiver) {
   tableName += sender + receiver;
 } else {
@@ -10,15 +11,15 @@ if (sender < receiver) {
 
 function getMessagsFromFirebase() {
   let firebaseDatabaseReference = firebase.database().ref(tableName);
-  let output = msgs = divClass = '';
+  let output = messages = divClass = '';
   firebaseDatabaseReference.on('child_added', function(snapshot) {
-    msgs = snapshot.val();
-    if (msgs.username == sender) {
+    messages = snapshot.val();
+    if (messages.username == sender) {
       divClass = "sender-text";
     } else {
       divClass = "receiver-text";
     }
-    output += '<div id = ' + divClass + ' class = "chat-text ' + msgs.username + '">' + msgs.msg + '</div>';
-    $("#chatbox").html(output);
+    output += '<div id = ' + divClass + ' class = "chat-text ' + messages.username + '">' + messages.message + '</div>';
+    $('#chatbox').html(output);
   });
 }
