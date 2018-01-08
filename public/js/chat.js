@@ -10,16 +10,19 @@ if (sender < receiver) {
 }
 
 function getMessagsFromFirebase() {
-  let firebaseDatabaseReference = firebase.database().ref(tableName);
-  let output = messages = divClass = '';
-  firebaseDatabaseReference.on('child_added', function(snapshot) {
-    messages = snapshot.val();
-    if (messages.username == sender) {
-      divClass = "sender-text";
-    } else {
-      divClass = "receiver-text";
-    }
-    output += '<div id = ' + divClass + ' class = "chat-text ' + messages.username + '">' + messages.message + '</div>';
-    $('#chatbox').html(output);
-  });
+  if(tableName.indexOf('UNDEFINED') == -1 && tableName.indexOf('NULL') == -1){
+    let firebaseDatabaseReference = firebase.database().ref('chat/' + tableName);
+    let output = messages = divId = '';
+    firebaseDatabaseReference.on('child_added', function(snapshot) {
+      messages = snapshot.val();
+      if (messages.username == sender) {
+        divId = "sender-text";
+      } else {
+        divId = "receiver-text";
+      }
+      output += '<div id = ' + divId + ' class = "chat-text ' + messages.username + '">' + messages.message + '</div>';
+      $('#chatbox').html(output);
+      $("html, body").scrollTop($(document).height()-$(window).height());
+    });
+  }
 }

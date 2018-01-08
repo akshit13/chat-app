@@ -76,6 +76,14 @@
    color: #000 !important;
  }
 
+  .status-true{
+    color:#fff;
+  }
+
+  .status-false{
+    color: #000;
+  }
+
  /* MAIN CONTENT */
 
  .mdl-layout__content {

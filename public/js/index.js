@@ -1,4 +1,9 @@
-let usersReference = firebase.database().ref('users');
+let chatTableArray = [],chatWindowStatus = false;
+
+// RETURN REFERENCE TO 'users' COLLECTION
+function usersReference() {
+  return firebase.database().ref('users');
+}
 
 // ON LOGIN BUTTON CLICK
 $('#btn-login').click(
@@ -40,10 +45,11 @@ $('#btn-signup-two').click(
 // ON LOGOUT BUTTON CLICK
 $('#btn-logout').click(
   function() {
+    setUserStatus(false);
     firebase.auth().signOut().catch(function(error) {
       alert(error.message);
     });
-    clearSession();
+    clearSessionStorage();
     location.reload();
   }
 )
@@ -73,11 +79,12 @@ $('#btn-login-two').click(
 function addNewUserInFirebaseDB(username, email) {
   let newUser = {
     username: username,
-    email: email
+    email: email,
+    isActive: true
   };
-  usersReference.push().set(newUser);
+  usersReference().push().set(newUser);
   sessionStorage.setItem('SENDER', username);
-  sessionStorage.setItem('USEREMAIL', email);
+  sessionStorage.setItem('SENDER-MAIL', email);
 }
 
 // SHOW/HIDE DIALOG
@@ -96,28 +103,29 @@ firebase.auth().onAuthStateChanged(function(user) {
   }
 })
 
-// UPDATE UI AFTER USER SIGNIN
+// UPDATE UI AFTER SIGNIN
 function updateUIAfterLogin(email) {
-  sessionStorage.setItem('USEREMAIL', email);
+  sessionStorage.setItem('SENDER-MAIL', email);
+  setUserStatus(true);
   getAndUpdateUsernameFromFirebaseDB(email);
   $('#email-area').text(email);
   getAndUpdateUsersFromFirebaseDB(email);
 }
 
-// GET AND UPDATE USERLIST FROM FIREBASE DB 'users'
+// GET AND UPDATE USERLIST IN NAVBAR FROM FIREBASE DB 'users'
 function getAndUpdateUsersFromFirebaseDB(email) {
   let output = user = '';
-  usersReference.on('child_added', function(snapshot) {
+  usersReference().on('child_added', function(snapshot) {
     user = snapshot.val();
     if (user.email != email)
-      output += '<button onclick="chatWindow(this)" id="' + user.username + '" class="mdl-navigation__link"><i class="material-icons">account_circle</i> &nbsp;' + user.username + '</button>';
+      output += '<button onclick="chatWindow(this.id, ' + user.isActive + ')" id="' + user.username + '" class="mdl-navigation__link"><i id="circle-' + user.username + '" class="material-icons status-' + user.isActive + '">account_circle</i> &nbsp;' + user.username + ' <i id="status-' + user.username + '" </button>';
     $('#active-users').html(output);
   });
 }
 
 // GET AND UPDATE USERNAME FROM FIREBASE DB 'users'
 function getAndUpdateUsernameFromFirebaseDB(email) {
-  usersReference.on('child_added', function(snapshot) {
+  usersReference().on('child_added', function(snapshot) {
     user = snapshot.val();
     if (user.email == email) {
       sessionStorage.setItem('SENDER', user.username);
@@ -126,20 +134,71 @@ function getAndUpdateUsernameFromFirebaseDB(email) {
   });
 }
 
-
-// POPULATE CHAT WINDOW
-function chatWindow(username) {
-  $('#chat-window').show();
-  $('#chat-uname').text(username.id);
-
-  sessionStorage.removeItem('RECEIVER');
-  sessionStorage.removeItem('TABLENAME');
-  sessionStorage.setItem('RECEIVER', username.id);
-  updateTableName(username.id);
-  document.getElementById('chat-frame').contentWindow.location.reload();
+// USER ONLINE STATUS
+function setUserStatus(status) {
+  let email = sessionStorage.getItem('SENDER-MAIL');
+  if (email) {
+    usersReference().on('child_added', function(snapshot) {
+      let parentKey = snapshot.key;
+      let user = snapshot.val();
+      if (user.email == email) {
+        firebase.database().ref("/users/" + parentKey).update({
+          isActive: status
+        });
+        //console.log(user.email + ' isActive set to ' + user.isActive);
+      }
+    });
+  }
 }
 
-// HELPER FUNCTION TO UPDATE TABLE NAME FOR CHAT
+
+// POPULATE CHAT WINDOW
+function chatWindow(receiver, status) {
+  $('#chat-window').show();
+  $('#chat-uname').text(receiver);
+  //chage in css later
+  if (status) {
+    $("#chat-header").css({
+      "background-color": "#55c50b"
+    });
+  } else {
+    $("#chat-header").css({
+      "background-color": "#000"
+    });
+  }
+
+  let lastReceiver = sessionStorage.getItem('RECEIVER');
+
+  if (receiver != lastReceiver || lastReceiver == null) {
+    sessionStorage.setItem('RECEIVER', receiver);
+    updateTableName(receiver);
+  }
+  if (!chatWindowStatus || (receiver != lastReceiver && chatWindowStatus)) {
+    chatWindowStatus = true;
+    document.getElementById('chat-frame').contentWindow.location.reload();
+  }
+}
+
+// NOTIFY ON MESSAGE RECIEVE
+firebase.database().ref('chat').on('value', function(snapshot) {
+  let username = sessionStorage.getItem('SENDER');
+  let tableName = snapshot.val();
+  for (let key in tableName) {
+    let count = 0;
+    firebase.database().ref('chat/' + key).on('child_added', function(snapshot) {
+      //msgR->totalMessageReceived
+      let msgR = snapshot.val();
+      count++;
+      let receiver = sessionStorage.getItem('RECEIVER');
+      if (msgR.username != username && key.indexOf(username) != -1 && chatTableArray[key] && count > chatTableArray[key]) {
+        chatWindow(msgR.username, true);
+      }
+    });
+    chatTableArray[key] = count;
+  }
+});
+
+// HELPER FUNCTION TO UPDATE TABLE NAME FOR CHAT IN FIREBASE
 let globalChatReference;
 
 function updateTableName(receiver) {
@@ -150,18 +209,15 @@ function updateTableName(receiver) {
   } else {
     tableName += receiver + sender;
   }
-  let chatRef = firebase.database().ref(tableName);
-  globalChatReference = chatRef;
-  sessionStorage.setItem('TABLENAME', tableName);
+  globalChatReference = firebase.database().ref('chat/' + tableName);
 }
 
 // SEND NEW MESSAGE
 $('#msg-form').submit(function(e) {
   e.preventDefault();
-  let sender = sessionStorage.getItem('SENDER');
   let message = $('#chat-input').val();
   let newMessage = {
-    username: sender,
+    username: sessionStorage.getItem('SENDER'),
     message: message
   };
   globalChatReference.push().set(newMessage);
@@ -172,10 +228,11 @@ $('#msg-form').submit(function(e) {
 $('#btn-close').click(
   function() {
     $('#chat-window').hide();
+    chatWindowStatus = false;
   }
 )
 
-// CLEAR/DELETE SESSION STORAGE
-function clearSession() {
+// CLEAR SESSION STORAGE
+function clearSessionStorage() {
   sessionStorage.clear();
 }
